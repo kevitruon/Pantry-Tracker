@@ -16,9 +16,12 @@
     "firebase": "^10.12.4",
     "next": "14.2.5",
     "react": "^18",
+    "react-camera-pro": "^1.4.0",
     "react-dom": "^18"
   },
   "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/preset-react": "^7.24.7",
     "eslint": "^8",
     "eslint-config-next": "14.2.5"
   }
