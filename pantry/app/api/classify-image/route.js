@@ -13,7 +13,7 @@ export async function POST(request) {
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const prompt = "What items do you see in this image? Please provide a list of up to 5 tags describing the contents, focusing on food items if present.";
+    const prompt = "What item do you see in this image? Please respond in one word";
 
     const result = await model.generateContent([
       prompt,

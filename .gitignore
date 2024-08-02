@@ -1,2 +1,2 @@
-# Ignore firebase.js in the pantry directory
-pantry/firebase.js
+
+.env.local

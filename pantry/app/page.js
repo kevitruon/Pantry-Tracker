@@ -5,12 +5,8 @@ import {
   Container,
   Typography,
   Box,
-  Button,
   Paper,
   CircularProgress,
-  Stepper,
-  Step,
-  StepLabel,
   Fab,
   useTheme,
   useMediaQuery,
@@ -19,13 +15,11 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  IconButton,
+  Button,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
 import ItemList from './components/ItemList';
-import ImageCaptureStep from './components/ImageCaptureStep';
-import ItemDetailsStep from './components/ItemDetailsStep';
+import AddEditItemForm from './components/AddEditItemForm';
 import SearchBar from './components/SearchBar';
 import { db, storage } from '../firebase';
 import {
@@ -38,12 +32,10 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-
 export default function Home() {
   const [items, setItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [activeStep, setActiveStep] = useState(0);
   const [newItem, setNewItem] = useState({ imageUrl: '', name: '', quantity: '', tags: [] });
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -71,33 +63,24 @@ export default function Home() {
     }
   };
 
-  const addItem = async () => {
+  const addItem = async (item) => {
     try {
-      await addDoc(collection(db, 'pantryItems'), {
-        name: newItem.name,
-        quantity: newItem.quantity,
-        imageUrl: newItem.imageUrl,
-        tags: newItem.tags
-      });
+      await addDoc(collection(db, 'pantryItems'), item);
       fetchItems();
-      resetForm();
+      setIsAddingItem(false);
     } catch (error) {
       console.error("Error adding item:", error);
       alert('Error adding item. Please try again.');
     }
   };
 
-  const updateItem = async () => {
+  const updateItem = async (item) => {
     try {
       const itemRef = doc(db, 'pantryItems', editingItem.id);
-      await updateDoc(itemRef, {
-        name: newItem.name,
-        quantity: newItem.quantity,
-        imageUrl: newItem.imageUrl,
-        tags: newItem.tags
-      });
+      await updateDoc(itemRef, item);
       fetchItems();
-      resetForm();
+      setEditingItem(null);
+      setIsAddingItem(false);
     } catch (error) {
       console.error("Error updating item:", error);
       alert('Error updating item. Please try again.');
@@ -146,27 +129,22 @@ export default function Home() {
       }
 
       const data = await response.json();
-      setNewItem({ ...newItem, imageUrl, tags: data.tags });
-      setActiveStep(1);
+
+      return {
+        imageUrl,
+        classification: data.tags[0] || '',
+        tags: data.tags
+      };
     } catch (error) {
       console.error("Error processing captured image:", error);
       alert('Error uploading image. Please try again.');
+      throw error;
     }
-  };
-
-
-  const resetForm = () => {
-    setIsAddingItem(false);
-    setEditingItem(null);
-    setActiveStep(0);
-    setNewItem({ imageUrl: '', name: '', quantity: '', tags: [] });
   };
 
   const handleEdit = (item) => {
     setEditingItem(item);
-    setNewItem(item);
     setIsAddingItem(true);
-    setActiveStep(1);
   };
 
   const handleDelete = (id) => {
@@ -174,67 +152,43 @@ export default function Home() {
     setDeleteConfirmOpen(true);
   };
 
-  const handleCancelAddItem = () => {
-    if (confirm("Are you sure you want to cancel? Your progress will be lost.")) {
-      resetForm();
-    }
-  };
-
   const filteredItems = items.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const steps = ['Capture Image', 'Item Details'];
-
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h3" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
+      <Typography variant="h3" component="h1" gutterBottom align="center" sx={{ mb: 4, fontWeight: 'bold', color: theme.palette.primary.main }}>
         Pantry Manager
       </Typography>
 
-      <SearchBar value={searchTerm} onChange={setSearchTerm} />
+      <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+        <SearchBar value={searchTerm} onChange={setSearchTerm} />
+      </Paper>
 
       {isAddingItem ? (
-        <Paper elevation={3} sx={{ p: 4, mb: 4, position: 'relative' }}>
-          <IconButton
-            aria-label="close"
-            onClick={handleCancelAddItem}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
+        <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
+          <AddEditItemForm
+            onSubmit={editingItem ? updateItem : addItem}
+            initialValues={editingItem}
+            onCancel={() => {
+              setEditingItem(null);
+              setIsAddingItem(false);
             }}
-          >
-            <CloseIcon />
-          </IconButton>
-          <Stepper activeStep={activeStep} alternativeLabel>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-          <Box sx={{ mt: 4 }}>
-            {activeStep === 0 ? (
-              <ImageCaptureStep onCapture={handleImageCapture} onCancel={handleCancelAddItem} />
-            ) : (
-              <ItemDetailsStep
-                item={newItem}
-                onChange={(updatedItem) => setNewItem(updatedItem)}
-                onSubmit={editingItem ? updateItem : addItem}
-                onBack={() => setActiveStep(0)}
-                onCancel={handleCancelAddItem}
-                isEditing={!!editingItem}
-              />
-            )}
-          </Box>
+            isEditing={!!editingItem}
+            onImageCapture={handleImageCapture}
+          />
         </Paper>
       ) : (
         <Fab
           color="primary"
           aria-label="add"
           onClick={() => setIsAddingItem(true)}
-          sx={{ position: 'fixed', bottom: 16, right: 16 }}
+          sx={{
+            position: 'fixed',
+            bottom: theme.spacing(4),
+            right: theme.spacing(4),
+          }}
         >
           <AddIcon />
         </Fab>
