@@ -37,7 +37,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { classifyImage } from '../utils/imageClassification';
+
 
 export default function Home() {
   const [items, setItems] = useState([]);
@@ -132,16 +132,28 @@ export default function Home() {
         imageUrl = imageSource;
       }
 
-      // Classify the image
-      const tags = await classifyImage(imageUrl);
+      // Call the API endpoint for image classification
+      const response = await fetch('/api/classify-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ imageUrl }),
+      });
 
-      setNewItem({ ...newItem, imageUrl, tags });
+      if (!response.ok) {
+        throw new Error('Failed to classify image');
+      }
+
+      const data = await response.json();
+      setNewItem({ ...newItem, imageUrl, tags: data.tags });
       setActiveStep(1);
     } catch (error) {
       console.error("Error processing captured image:", error);
       alert('Error uploading image. Please try again.');
     }
   };
+
 
   const resetForm = () => {
     setIsAddingItem(false);
